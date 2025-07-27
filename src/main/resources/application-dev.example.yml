@@ -1,0 +1,103 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/plain
+    min-response-size: 1024
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 20MB
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/chatapp_db
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9080/realms/chatit
+          jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+
+  liquibase:
+    enabled: false
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Use 'validate', 'create', or 'update' depending on your needs
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+        use_sql_comments: false
+        generate_statistics: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false  # Best practice to avoid LazyInitializationException
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: DUMMY
+    password: DUMMY
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+
+jwt:
+  auth:
+    converter:
+      resource-id: chatit-client
+      principal-attribute: preferred_username
+
+keycloak:
+  server-url: http://localhost:9080
+  client-id: ${jwt.auth.converter.resource-id}  # Mantienes tu cliente actual
+  email-verified: true
+  realm:
+    name: chatit
+  admin:
+    secret: DUMMY
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: false
+
+aws:
+  s3:
+    useLocalStack: true
+    bucket-name: ecommerce-buyit-bucket
+    localstackEndpoint: http://s3.localhost.localstack.cloud:4566
+    region: us-east-1
+    access-key: "test"
+    secret-key: "test"
+
+logging:
+  level:
+    org.springframework.http: debug
+
+frontend:
+  url: http://localhost:5173
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    prometheus:
+      access: read_only
+
