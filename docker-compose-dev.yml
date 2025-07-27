@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: chat-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - chat_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: chat-keycloak
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    command: start-dev
+    ports:
+      - "9080:8080"
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+  localstack:
+    image: localstack/localstack:4
+    container_name: chat-localstack
+    environment:
+      - SERVICES=s3,sqs,dynamodb
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - PERSISTENCE=1
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "chat_localstack_data:/var/lib/localstack"
+      - "./localstack/scripts/config-aws.sh:/etc/localstack/init/ready.d/config-aws.sh:ro"
+      - "./localstack/scripts/create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh:ro"
+      - "./localstack/scripts/cors.json:/etc/localstack/init/ready.d/cors.json:ro"
+    networks:
+      - chat-network
+    restart: unless-stopped
+
+networks:
+  chat-network:
+
+volumes:
+  chat_postgres_data:
+  chat_localstack_data:
