@@ -2,29 +2,20 @@ package com.devit.chatapp.repository;
 
 import com.devit.chatapp.dto.ConversationWithLastMessageDTO;
 import com.devit.chatapp.entity.Conversation;
-import com.devit.chatapp.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
     boolean existsByIdAndMembers_Id(Long conversationId, Long userId);
 
-    @Query("""
-                SELECT DISTINCT c FROM Conversation c
-                JOIN FETCH c.members m
-                WHERE :keycloakId IN (SELECT u.keycloakId FROM c.members u)
-            """)
-    List<Conversation> findMyConversations(@Param("keycloakId") String keycloakId);
-
 
     @Query("""
-                SELECT u.keycloakId
+                SELECT u.user.keycloakId
                 FROM Conversation c
                 JOIN c.members u
                 WHERE c.id = :chatId
@@ -69,9 +60,4 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             """, nativeQuery = true)
     List<ConversationWithLastMessageDTO> findConversationsWithLastMessageByKeycloakId(@Param("keycloakId") String keycloakId);
 
-
-    @Query("SELECT c FROM Conversation c " +
-            "WHERE c.type = 'DM' AND SIZE(c.members) = 2 " +
-            "AND :user1 MEMBER OF c.members AND :user2 MEMBER OF c.members")
-    Optional<Conversation> findDmByMembers(@Param("user1") User user1, @Param("user2") User user2);
 }

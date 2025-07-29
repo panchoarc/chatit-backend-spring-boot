@@ -27,9 +27,8 @@ public interface ConversationMapper {
             dto.setAvatarUrl("/images/group-avatar.png");
         } else {
             User other = conversation.getMembers().stream()
-                    .filter(m -> !m.getKeycloakId().equals(currentUserId))
-                    .findFirst()
-                    .orElse(null);
+                    .filter(m -> !m.getUser().getKeycloakId().equals(currentUserId))
+                    .findFirst().get().getUser();
 
             dto.setName(Objects.requireNonNull(other).getFirstName() + " " + other.getLastName());
             dto.setAvatarUrl(other.getAvatarUrl());

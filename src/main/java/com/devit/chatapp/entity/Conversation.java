@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -23,12 +24,9 @@ public class Conversation {
     @Column(name = "name") // Solo para grupos
     private String name;
 
-    @ManyToOne
-    private User creator;
+    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ConversationMember> members;
 
-    @ManyToMany
-    @JoinTable(name = "conversation_members",
-            joinColumns = @JoinColumn(name = "conversation_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private Set<User> members;
+    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Message> messages;
 }
