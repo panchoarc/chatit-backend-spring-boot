@@ -3,7 +3,7 @@
 echo "===> [S3] Creando bucket en LocalStack..."
 
 # Configuración
-BUCKET_NAME="ecommerce-buyit-bucket"
+BUCKET_NAME="chatit-bucket"
 AWS_ENDPOINT="http://s3.localhost.localstack.cloud:4566"
 
 # Crear bucket
