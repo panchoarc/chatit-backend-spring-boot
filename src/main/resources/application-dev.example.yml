@@ -101,3 +101,9 @@ management:
     prometheus:
       access: read_only
 
+stomp:
+  host: localhost
+  port: 61613
+  username: admin
+  passcode: admin
+
