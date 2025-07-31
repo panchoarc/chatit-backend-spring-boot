@@ -18,11 +18,19 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
     private String frontEndUrl;
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+    private final StompProperties stompProperties;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic","/queue");  // server->cliente
-        config.setApplicationDestinationPrefixes("/app"); //cliente->servidor
+        config.enableStompBrokerRelay("/topic", "/queue")
+                .setRelayHost(stompProperties.getHost())
+                .setRelayPort(stompProperties.getPort())
+                .setClientLogin(stompProperties.getLogin())
+                .setClientPasscode(stompProperties.getPasscode())
+                .setSystemLogin(stompProperties.getLogin())
+                .setSystemPasscode(stompProperties.getPasscode());
+
+        config.setApplicationDestinationPrefixes("/app");
         config.setUserDestinationPrefix("/user");
     }
 
