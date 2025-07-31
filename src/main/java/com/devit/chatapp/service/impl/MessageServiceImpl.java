@@ -7,7 +7,7 @@ import com.devit.chatapp.entity.Message;
 import com.devit.chatapp.entity.User;
 import com.devit.chatapp.mapper.MessageMapper;
 import com.devit.chatapp.repository.MessageRepository;
-import com.devit.chatapp.service.ConversationService;
+import com.devit.chatapp.service.ConversationMemberService;
 import com.devit.chatapp.service.MessageService;
 import com.devit.chatapp.service.UserService;
 import jakarta.transaction.Transactional;
@@ -19,22 +19,21 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class MessageServiceImpl implements MessageService {
 
-
-    private final ConversationService conversationService;
     private final MessageRepository messageRepo;
     private final UserService userService;
     private final MessageMapper messageMapper;
-
+    private final ConversationMemberService conversationMemberService;
 
     @Override
-    public ChatMessageResponse saveMessage(Long chatId, ChatMessageRequest chatMessage) {
-        Conversation conversation = conversationService.findById(chatId);
+    public ChatMessageResponse saveMessage(Conversation conversation, ChatMessageRequest chatMessage) {
 
         User sender = userService.getUserByKeycloakId(chatMessage.getSenderId());
 
@@ -58,4 +57,14 @@ public class MessageServiceImpl implements MessageService {
         return pagedConversations.map(messageMapper::toChatMessageResponseDTO);
 
     }
+
+    @Override
+    public long countUnreadMessages(Long conversationId, String keycloakId) {
+        Instant lastReadAt = conversationMemberService.getLastReadAt(conversationId, keycloakId);
+
+        if (lastReadAt == null) lastReadAt = Instant.EPOCH;
+
+        return messageRepo.countByConversationIdAndCreatedAtAfter(conversationId, lastReadAt);
+    }
+
 }
