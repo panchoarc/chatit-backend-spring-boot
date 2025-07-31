@@ -13,4 +13,5 @@ public class ConversationResponseDTO {
     private ConversationType type;
     private String avatarUrl;
     private ChatMessageResponse lastMessage;
+    private Long unreadCount;
 }

@@ -14,17 +14,15 @@ import com.devit.chatapp.enums.MessageType;
 import com.devit.chatapp.exception.ResourceNotFoundException;
 import com.devit.chatapp.mapper.ConversationMapper;
 import com.devit.chatapp.mapper.UserMapper;
-import com.devit.chatapp.repository.ConversationMemberRepository;
 import com.devit.chatapp.repository.ConversationRepository;
-import com.devit.chatapp.service.ChatNotificationService;
-import com.devit.chatapp.service.ConversationService;
-import com.devit.chatapp.service.UserService;
+import com.devit.chatapp.service.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +34,6 @@ import java.util.stream.Collectors;
 public class ConversationServiceImpl implements ConversationService {
 
     private final ConversationRepository conversationRepository;
-    private final ConversationMemberRepository conversationMemberRepository;
     private final UserService userService;
     private final ConversationMapper conversationMapper;
     private final ChatNotificationService chatNotificationService;
@@ -44,6 +41,8 @@ public class ConversationServiceImpl implements ConversationService {
     private final UserMapper userMapper;
 
     private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ConversationMemberService conversationMemberService;
+    private final MessageService messageService;
 
     @Override
     public Conversation findById(Long conversationId) {
@@ -51,20 +50,9 @@ public class ConversationServiceImpl implements ConversationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation" + conversationId + "not found"));
     }
 
-    public boolean isMember(Long conversationId, Long userId) {
-        return conversationRepository.existsByIdAndMembers_Id(conversationId, userId);
-    }
-
     @Override
     @Transactional
     public void createConversation(CreateConversationRequest conversationRequest, String creatorId) {
-        if (conversationRequest.getType() == null) {
-            throw new IllegalArgumentException("El tipo de conversación es obligatorio.");
-        }
-
-        if (conversationRequest.getMemberIds() == null || conversationRequest.getMemberIds().isEmpty()) {
-            throw new IllegalArgumentException("Se debe especificar al menos un miembro.");
-        }
 
         Set<User> members = userService.findAllByKeycloakIds(conversationRequest.getMemberIds());
 
@@ -77,27 +65,15 @@ public class ConversationServiceImpl implements ConversationService {
                 throw new IllegalArgumentException("El nombre del grupo es obligatorio para conversaciones de tipo GROUP.");
             }
 
-            if (members.isEmpty()) {
-                throw new IllegalArgumentException("Un grupo debe tener al menos un miembro adicional al creador.");
-            }
-
-        } else if (conversationRequest.getType() == ConversationType.DM) {
-            if (members.size() != 1) {
-                throw new IllegalArgumentException("Una conversación DM debe incluir exactamente un usuario adicional al creador.");
-            }
-        } else {
-            throw new IllegalArgumentException("Tipo de conversación no soportado.");
+        } else if (conversationRequest.getType() == ConversationType.DM && members.size() != 2) {
+            throw new IllegalArgumentException("Una conversación DM debe incluir exactamente un usuario adicional al creador.");
         }
 
-        // Crear conversación
         Conversation conversation = new Conversation();
         conversation.setType(conversationRequest.getType());
         conversation.setName(conversationRequest.getType() == ConversationType.GROUP ? conversationRequest.getName() : null);
 
-        // Agregar miembros (incluyendo al creador)
-        User creator = userService.getUserByKeycloakId(creatorId);
         Set<User> allParticipants = new HashSet<>(members);
-        allParticipants.add(creator);
 
         Set<ConversationMember> memberEntities = allParticipants.stream()
                 .map(user -> {
@@ -111,10 +87,8 @@ public class ConversationServiceImpl implements ConversationService {
 
         conversation.setMembers(memberEntities);
 
-        // Guardar conversación y miembros en cascada
         Conversation saved = conversationRepository.save(conversation);
 
-        // Enviar notificaciones por WebSocket
         ConversationResponseDTO conversationResponseDTO = conversationMapper.toConversationResponseDTO(saved, creatorId);
         for (User member : allParticipants) {
             simpMessagingTemplate.convertAndSendToUser(member.getKeycloakId(), "/queue/chats", conversationResponseDTO);
@@ -124,11 +98,6 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional
     public List<ConversationResponseDTO> findMyConversations(String keycloakId) {
-        /*
-         *Pasos necesarios
-         * 1.- Obtener mis conversaciones ordenadas
-         *
-         * */
         List<ConversationWithLastMessageDTO> myConversations = conversationRepository.findConversationsWithLastMessageByKeycloakId(keycloakId);
 
 
@@ -150,6 +119,8 @@ public class ConversationServiceImpl implements ConversationService {
                         lastMessage.setSenderId(dto.getLastMessageSenderId());
                         response.setLastMessage(lastMessage);
                     }
+                    long unreadMessages = messageService.countUnreadMessages(dto.getConversationId(), keycloakId);
+                    response.setUnreadCount(unreadMessages);
 
                     return response;
                 })
@@ -162,7 +133,7 @@ public class ConversationServiceImpl implements ConversationService {
     public List<UserResponseDTO> getMembersByChatId(Long chatId) {
         Conversation conv = findById(chatId);
 
-        List<ConversationMember> members = conversationMemberRepository.findByConversationId(conv.getId());
+        List<ConversationMember> members = conversationMemberService.getConversationMembers(conv.getId());
 
         return members.stream()
                 .map(ConversationMember::getUser)
@@ -175,8 +146,7 @@ public class ConversationServiceImpl implements ConversationService {
     public void addMemberToConversation(Long conversationId, AddMemberRequest memberRequest) {
         Conversation conversation = findById(conversationId);
 
-
-        List<ConversationMember> members = conversationMemberRepository.findByConversationId(conversationId);
+        List<ConversationMember> members = conversationMemberService.getConversationMembers(conversationId);
         User newUser = userService.getUserByKeycloakId(memberRequest.getMemberId());
 
         boolean alreadyMember = members.stream()
@@ -186,15 +156,15 @@ public class ConversationServiceImpl implements ConversationService {
             throw new IllegalArgumentException("El usuario ya es miembro de la conversación.");
         }
 
-        // Crear nueva relación
         ConversationMember conversationMember = new ConversationMember();
         conversationMember.setConversation(conversation);
         conversationMember.setUser(newUser);
-        conversationMember.setLastReadAt(null); // o Instant.EPOCH si prefieres un valor por defecto
+        conversationMember.setLastReadAt(Instant.now());
 
-        conversationMemberRepository.save(conversationMember);
+        conversation.getMembers().add(conversationMember);
+        conversationRepository.save(conversation);
 
-        // Notificar al nuevo miembro
+
         ConversationResponseDTO conversationResponseDTO =
                 conversationMapper.toConversationResponseDTO(conversation, memberRequest.getMemberId());
 

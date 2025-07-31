@@ -10,6 +10,7 @@ import com.devit.chatapp.service.MessageService;
 import com.devit.chatapp.util.Pagination;
 import com.devit.chatapp.util.ResponseAPI;
 import com.devit.chatapp.util.ResponseBuilder;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
@@ -60,23 +61,19 @@ public class ConversationController {
                 messages.getNumberOfElements() // cuántos elementos contiene esta página
         );
 
-
         return ResponseBuilder.successPaginated("Messages fetched", messages.getContent(), pagination);
     }
 
 
     @PostMapping
-    public void createConversation(@RequestBody CreateConversationRequest request, @AuthenticationPrincipal Jwt userJwt) {
+    public void createConversation(@Valid @RequestBody CreateConversationRequest request, @AuthenticationPrincipal Jwt userJwt) {
         String creatorId = userJwt.getSubject();
-        conversationService.createConversation(request, creatorId);
+        conversationService.createConversation(request,creatorId);
     }
 
 
     @PostMapping("{conversationId}/addMember")
     public void handleNewMember(@PathVariable Long conversationId, @RequestBody AddMemberRequest memberId) {
-
-        log.info("MemberId: {}", memberId);
-        log.info("Conversation Id: {}", conversationId);
         conversationService.addMemberToConversation(conversationId, memberId);
     }
 }

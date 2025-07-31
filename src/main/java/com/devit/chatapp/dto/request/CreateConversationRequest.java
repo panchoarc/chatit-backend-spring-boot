@@ -1,6 +1,8 @@
 package com.devit.chatapp.dto.request;
 
+import com.devit.chatapp.annotations.ValueOfEnum;
 import com.devit.chatapp.enums.ConversationType;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,7 +12,11 @@ import java.util.Set;
 @NoArgsConstructor
 public class CreateConversationRequest {
 
-    private ConversationType type;     // DM o GROUP
-    private String name;               // Solo requerido para grupos
-    private Set<String> memberIds;       // Incluirá al creador también
+    @ValueOfEnum(enumClass = ConversationType.class, message = "Tipo de conversación inválida")
+    private ConversationType type;
+
+    private String name;
+
+    @NotEmpty(message = "Debe haber al menos un miembro")
+    private Set<String> memberIds;
 }

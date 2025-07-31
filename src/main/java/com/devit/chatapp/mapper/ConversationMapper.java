@@ -3,6 +3,7 @@ package com.devit.chatapp.mapper;
 
 import com.devit.chatapp.dto.response.ConversationResponseDTO;
 import com.devit.chatapp.entity.Conversation;
+import com.devit.chatapp.entity.ConversationMember;
 import com.devit.chatapp.entity.User;
 import com.devit.chatapp.enums.ConversationType;
 import org.mapstruct.*;
@@ -27,8 +28,10 @@ public interface ConversationMapper {
             dto.setAvatarUrl("/images/group-avatar.png");
         } else {
             User other = conversation.getMembers().stream()
-                    .filter(m -> !m.getUser().getKeycloakId().equals(currentUserId))
-                    .findFirst().get().getUser();
+                    .map(ConversationMember::getUser)
+                    .filter(u -> !u.getKeycloakId().equals(currentUserId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No other member found in DM"));
 
             dto.setName(Objects.requireNonNull(other).getFirstName() + " " + other.getLastName());
             dto.setAvatarUrl(other.getAvatarUrl());

@@ -12,9 +12,7 @@ public interface ConversationService {
 
     Conversation findById(Long conversationId);
 
-    boolean isMember(Long conversationId, Long userId);
-
-    void createConversation(CreateConversationRequest conversation, String creatorId);
+    void createConversation(CreateConversationRequest conversation,String creatorId);
 
     List<ConversationResponseDTO> findMyConversations(String keycloakId);
 
@@ -23,5 +21,8 @@ public interface ConversationService {
     void addMemberToConversation(Long conversationId, AddMemberRequest memberRequest);
 
     List<String> findMembersByChatId(Long chatId);
+
+
+
 
 }
