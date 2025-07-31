@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, Long> {
     List<ConversationMember> findByConversationId(Long id);
+
+    ConversationMember findByConversationIdAndUser_KeycloakId(Long conversationId, String userKeycloakId);
 }
