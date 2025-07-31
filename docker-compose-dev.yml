@@ -47,9 +47,30 @@ services:
       - chat-network
     restart: unless-stopped
 
+
+  rabbitmq:
+    build:
+      context: .
+      dockerfile: RabbitMQDockerfile.yml
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "61613:61613"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - chat_rabbitmq_data:/var/lib/rabbitmq
+
+    networks:
+      chat-network:
+
 networks:
   chat-network:
 
 volumes:
   chat_postgres_data:
   chat_localstack_data:
+  chat_rabbitmq_data:
