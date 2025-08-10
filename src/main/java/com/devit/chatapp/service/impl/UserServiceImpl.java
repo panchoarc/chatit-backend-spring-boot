@@ -1,15 +1,17 @@
 package com.devit.chatapp.service.impl;
 
+import com.devit.chatapp.dto.request.ProfileUpdateRequest;
 import com.devit.chatapp.dto.request.UserRegisterDTO;
 import com.devit.chatapp.entity.Role;
 import com.devit.chatapp.entity.User;
 import com.devit.chatapp.exception.ResourceNotFoundException;
 import com.devit.chatapp.repository.UserRepository;
+import com.devit.chatapp.service.FileService;
 import com.devit.chatapp.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Set;
 
@@ -19,16 +21,12 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final FileService fileService;
 
     @Override
     public User getUserByKeycloakId(String keycloakId) {
         return userRepository.findByKeycloakId(keycloakId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-    }
-
-    @Override
-    public String extractKeycloakIdFromUser(Jwt user) {
-        return (String) user.getClaims().get("sub");
     }
 
     @Override
@@ -55,13 +53,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findById(Long creatorId) {
-        return userRepository.findById(creatorId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    public Set<User> findAllByKeycloakIds(Set<String> memberIds) {
+        return userRepository.findAllMembersIds(memberIds);
     }
 
     @Override
-    public Set<User> findAllByKeycloakIds(Set<String> memberIds) {
-        return userRepository.findAllMembersIds(memberIds);
+    public void updateUserProfile(ProfileUpdateRequest user, MultipartFile avatar, String userKeycloakId) {
+
+        User updatedUser =  getUserByKeycloakId(userKeycloakId);
+
+        updatedUser.setEmail(user.getEmail());
+        updatedUser.setUsername(user.getUsername());
+        if(avatar!=null){
+            String avatarUrl = fileService.uploadFile(avatar);
+            updatedUser.setAvatarUrl(avatarUrl);
+        }
+        userRepository.save(updatedUser);
+
+
     }
 }

@@ -16,7 +16,7 @@ public class UserInfoResponse {
     private String lastName;
     private String userName;
     private String keycloakId;
-
+    private String avatarUrl;
     private String roles;
 
 }
