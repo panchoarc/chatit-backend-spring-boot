@@ -1,14 +1,16 @@
 package com.devit.chatapp.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "conversation_members")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 public class ConversationMember {
     @Id
