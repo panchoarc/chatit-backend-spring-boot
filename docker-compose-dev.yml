@@ -67,6 +67,16 @@ services:
     networks:
       chat-network:
 
+  redis:
+    image: redis:8
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: [ "redis-server", "--appendonly", "yes" ]
+    restart: always
+
 networks:
   chat-network:
 
@@ -74,3 +84,4 @@ volumes:
   chat_postgres_data:
   chat_localstack_data:
   chat_rabbitmq_data:
+  redis_data:
